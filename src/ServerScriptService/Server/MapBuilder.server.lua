@@ -33,6 +33,7 @@ local HEALTH_MAX_TRANSPARENCY = 0.98
 local HEALTH_MIN_PART_AXIS = 0.25
 local DEBUG_MARKER_SIZE = Vector3.new(28, 28, 28)
 local COURSE_START_OFFSET_FROM_SPAWN = Vector3.new(0, -6, -6)
+local BASEPLATE_BOTTOM_OFFSET_ABOVE_SPAWN = 750
 
 local isGenerating = false
 local hasGenerated = false
@@ -169,6 +170,36 @@ local function countMapRoots()
         end
     end
     return count
+end
+
+local function moveBaseplateAboveCourseSpawn(courseSpawn)
+    if not courseSpawn or not courseSpawn:IsA("BasePart") then
+        return
+    end
+
+    for _, child in ipairs(Workspace:GetChildren()) do
+        if child:IsA("BasePart") and string.lower(child.Name) == "baseplate" then
+            local oldPosition = child.Position
+            local rotationOnly = child.CFrame - oldPosition
+            local targetBottomY = courseSpawn.Position.Y + BASEPLATE_BOTTOM_OFFSET_ABOVE_SPAWN
+            local targetCenterY = targetBottomY + (child.Size.Y * 0.5)
+
+            child.Anchored = true
+            child.CanCollide = false
+            child.CanTouch = false
+            child.CanQuery = false
+            child.Transparency = 1
+            child.CFrame = CFrame.new(oldPosition.X, targetCenterY, oldPosition.Z) * rotationOnly
+
+            print(string.format(
+                "[MapBuilder] Baseplate moved above CourseSpawn oldY=%.2f newCenterY=%.2f bottomY=%.2f courseSpawnY=%.2f",
+                oldPosition.Y,
+                child.Position.Y,
+                child.Position.Y - (child.Size.Y * 0.5),
+                courseSpawn.Position.Y
+            ))
+        end
+    end
 end
 
 local function getScriptDebugId()
@@ -461,17 +492,27 @@ local function printDiagnostics(diag)
     print("[MapBuilder][Diag] Workspace mapReady attribute:", tostring(Workspace:GetAttribute("NuruNuruRollMapReady")))
 end
 
-local function placeDebugMarkers(diag)
+local function placeDebugMarkers(diag, config)
     local mapRoot = diag.mapRoot
     if not mapRoot then
         return
     end
 
+    local projectConfig = config and config.Project
+    local enableStartRedBall = projectConfig and projectConfig.EnableStartRedBall == true
+
     local startMarkerPos = diag.firstCoursePart and (diag.firstCoursePart.Position + Vector3.new(0, 22, 0))
     local midMarkerPos = diag.midCoursePart and (diag.midCoursePart.Position + Vector3.new(0, 22, 0))
     local goalMarkerPos = (diag.goalTrigger and diag.goalTrigger:IsA("BasePart")) and (diag.goalTrigger.Position + Vector3.new(0, 22, 0)) or nil
 
-    createDebugMarker(mapRoot, "Debug_StartCourseMarker", startMarkerPos, Color3.fromRGB(255, 64, 64))
+    if enableStartRedBall then
+        createDebugMarker(mapRoot, "Debug_StartCourseMarker", startMarkerPos, Color3.fromRGB(255, 64, 64))
+    else
+        local oldStartMarker = mapRoot:FindFirstChild("Debug_StartCourseMarker")
+        if oldStartMarker then
+            oldStartMarker:Destroy()
+        end
+    end
     createDebugMarker(mapRoot, "Debug_MidCourseMarker", midMarkerPos, Color3.fromRGB(255, 228, 76))
     createDebugMarker(mapRoot, "Debug_GoalMarker", goalMarkerPos, Color3.fromRGB(82, 255, 130))
 end
@@ -666,17 +707,17 @@ local function tryFixCoursePlacement(diag)
     return true
 end
 
-local function runHealthCheck()
+local function runHealthCheck(config)
     local diag = collectMapDiagnostics()
     printDiagnostics(diag)
     printBuildDiagnostics(lastBuildDiagnostics)
-    placeDebugMarkers(diag)
+    placeDebugMarkers(diag, config)
 
     if tryFixCoursePlacement(diag) then
         diag = collectMapDiagnostics()
         print("[MapBuilder][Diag] Re-collected diagnostics after placement correction")
         printDiagnostics(diag)
-        placeDebugMarkers(diag)
+        placeDebugMarkers(diag, config)
     end
 
     local roadDiag = analyzeRoadContinuity(diag.courseParts)
@@ -1017,6 +1058,7 @@ local function buildCourse(config)
     spawn.CanCollide = false
     spawn.CanTouch = false
     spawn.Parent = startFolder
+    moveBaseplateAboveCourseSpawn(spawn)
 
     local rnd = Random.new(20260709)
     local pos = spawn.Position + COURSE_START_OFFSET_FROM_SPAWN
@@ -1279,7 +1321,7 @@ local function generateMapOnce(config)
     safeClearExistingMap()
     task.wait(0.03)
     buildCourse(config)
-    return runHealthCheck()
+    return runHealthCheck(config)
 end
 
 local function rebuildMapInternal(reason)

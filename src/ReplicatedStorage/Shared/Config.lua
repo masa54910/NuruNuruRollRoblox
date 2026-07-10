@@ -3,6 +3,16 @@ local Config = {
     Project = {
         Name = "NuruNuruRoll",
         SisterProject = "NuruNuruHill",
+        EnableStartRedBall = false,
+        EnableDownhillController = true,
+        EnableDownhillCamera = false,
+        EnableDownhillJumpPhysics = false,
+        EnableDownhillDebug = true,
+        EnableDownhillMinimalMode = true,
+        EnableDownhillProbeLogs = true,
+        EnableDownhillClientImpulseProbe = true,
+        EnableDownhillServerOwnershipProbe = true,
+        EnableDownhillServerImpulseProbe = false,
         EnableLegacySledSystem = false,
         EnableLegacySledInput = false,
         EnableLegacySlideHud = false,
@@ -86,6 +96,56 @@ local Config = {
         RespawnStopSeconds = 3.5,
         RespawnTippedSeconds = 2.2,
         CountdownSeconds = 2,
+    },
+
+    Downhill = {
+        StartSpeed = 24,
+        MinimumGroundSpeed = 28,
+        BaseTargetSpeed = 48,
+        MaximumGroundSpeed = 125,
+
+        DownhillSpeedBonus = 105,
+        UphillSpeedPenalty = 55,
+
+        GroundAcceleration = 36,
+        GroundDeceleration = 22,
+        LandingRecoveryAcceleration = 18,
+
+        MaximumLateralSpeed = 24,
+        GroundSteerAcceleration = 55,
+        GroundSteerRelease = 22,
+        AirSteerAcceleration = 12,
+
+        ForwardCorrectionStrength = 5.5,
+        MaximumForwardCorrectionAngle = 28,
+        EdgeSafetyRatio = 0.84,
+        EdgeReturnAcceleration = 48,
+
+        GroundRayDistance = 7,
+        GroundContactDistance = 4.5,
+        GroundStickSpeed = 3.5,
+        AirborneConfirmTime = 0.10,
+
+        MinimumJumpSpeed = 35,
+        LandingSoftImpactSpeed = 22,
+        LandingHardImpactSpeed = 55,
+        SoftLandingSpeedRetention = 0.96,
+        HardLandingSpeedRetention = 0.78,
+
+        WallCollisionCooldown = 0.35,
+        WallSpeedRetention = 0.72,
+        WallLateralRetention = 0.45,
+
+        CameraBackOffset = 0.65,
+        CameraUpOffset = 0.85,
+        CameraLookAheadMin = 18,
+        CameraLookAheadMax = 48,
+        CameraPositionResponsiveness = 14,
+        CameraRotationResponsiveness = 11,
+        CameraBaseFov = 78,
+        CameraMaximumFov = 96,
+        CameraFovSpeedReference = 115,
+        CameraMaximumRollDegrees = 6,
     },
 
     Course = {
