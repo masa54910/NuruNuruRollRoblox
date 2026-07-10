@@ -1,0 +1,51 @@
+{
+  "$schema": "https://raw.githubusercontent.com/rojo-rbx/rojo/master/schemas/project.schema.json",
+  "name": "NuruNuruRollRoblox",
+  "emitLegacyScripts": false,
+  "tree": {
+    "$className": "DataModel",
+
+    "Workspace": {
+      "$className": "Workspace"
+    },
+    "ReplicatedFirst": {
+      "$className": "ReplicatedFirst"
+    },
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "$path": "src/ReplicatedStorage"
+    },
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "$path": "src/ServerScriptService"
+    },
+    "ServerStorage": {
+      "$className": "ServerStorage"
+    },
+    "StarterGui": {
+      "$className": "StarterGui"
+    },
+    "StarterPack": {
+      "$className": "StarterPack"
+    },
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "$path": "src/StarterPlayer"
+    },
+    "SoundService": {
+      "$className": "SoundService"
+    },
+    "Chat": {
+      "$className": "Chat"
+    },
+    "LocalizationService": {
+      "$className": "LocalizationService"
+    },
+    "TestService": {
+      "$className": "TestService"
+    },
+    "TextChatService": {
+      "$className": "TextChatService"
+    }
+  }
+}

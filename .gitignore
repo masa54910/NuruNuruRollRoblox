@@ -1,0 +1,26 @@
+# Rojo temporary/generated files
+sourcemap.json
+
+# Roblox place/model local lock files
+*.rbxl.lock
+*.rbxlx.lock
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Backup files
+*.bak
+*~
