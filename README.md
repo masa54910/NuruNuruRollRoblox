@@ -1,44 +1,95 @@
-# ぬるぬるRoll (Roblox)
+# ぬるぬるRoll（NuruNuruRoll）
 
-Rojo 7.x 用の初期プロジェクトです。
+巨大な下り坂コースを、プレイヤー自身の物理挙動で高速滑走するRobloxゲームです。現在はコース生成を保護したまま、Phase 2の重力滑走を一工程ずつ検証する準備段階です。
 
-MVP は「巨大な石畳坂をローションで滑走し、港から海へダイブする」体験を最優先にしています。
+## 現在の状態
 
-## 構成
+- 基準復元ポイント: `3c2521bf2dc77ad3357abfa4e9b6116d6f53f1bc`
+- 既存コースは `StartPad` から `GoalTrigger` まで生成される構成
+- Baseplateは `CourseSpawn` より750 studs上へ退避し、衝突・接触・Queryを無効化
+- Legacy Sled / Input / HUD / Round / Result / GoalはConfigフラグで停止
+- Downhill Controllerは前進不能の原因調査用Probeモード
+- Downhill CameraとJump Physicsは停止
+- Phase 2のゲームコードは未完成。Studioでの採用判断も未完了
 
-- `default.project.json`
-- `src/ReplicatedStorage`
-- `src/ServerScriptService`
-- `src/StarterPlayer`
+「コードに存在する」と「Studioで動作確認済み」は別です。現在の確定事項は[ぬるぬるRoll固有設計](docs/10_ぬるぬるRoll固有設計.md)を参照してください。
 
-## 使い方
+## 技術構成
 
-1. Roblox Studio を開く
-2. Rojo プラグインを有効化
-3. プロジェクトルートで以下を実行
+- Roblox Studio / Luau
+- Rojo 7.x（既定ポート `34872`）
+- VS Code / Git / GitHub
+- Server: `src/ServerScriptService`
+- Shared: `src/ReplicatedStorage`
+- Client: `src/StarterPlayer`
 
-```powershell
-rojo serve
+## 開発開始時に読む順番
+
+1. [`AGENTS.md`](AGENTS.md)
+2. このREADME
+3. [`docs/10_ぬるぬるRoll固有設計.md`](docs/10_ぬるぬるRoll固有設計.md)
+4. 作業内容に対応する章
+5. [`docs/09_AI実装ワークフロー.md`](docs/09_AI実装ワークフロー.md)
+
+## フォルダ構成
+
+```text
+NuruNuruRollRoblox/
+├─ AGENTS.md
+├─ README.md
+├─ default.project.json
+├─ .github/copilot-instructions.md
+├─ docs/
+└─ src/
+   ├─ ReplicatedStorage/Shared
+   ├─ ServerScriptService/Server
+   └─ StarterPlayer/StarterPlayerScripts/Client
 ```
 
-4. Studio 側で Rojo プラグインから `localhost` に接続
+## Rojo起動と接続確認
 
-## 補足
+プロジェクトルートで実行します。
 
-- この構成は DataModel の標準サービス名に合わせた初期設定です。
-- ソースは `src` 以下に追加していきます。
+```powershell
+rojo serve default.project.json
+```
 
-## 現在のMVP実装
+StudioのRojoプラグインから `localhost:34872` へ接続し、`ReplicatedStorage`、`ServerScriptService`、`StarterPlayer` が `default.project.json` どおりに同期されることを確認します。Studioだけの変更はRojoの同期で上書きされ得るため、ソース管理対象はローカルファイルを正とします。詳細は[StudioとRojo運用](docs/01_StudioとRojo運用.md)を参照してください。
 
-- 巨大な下り坂コース生成（カーブ、軽いアップダウン、上り返し、港への大下り、海ダイブ）
-- 石畳道路 + ローション面の重ね配置
-- ゴール判定、スコア加算、ラウンド進行、リザルト通知
-- クライアントHUD（ラウンド状態・速度・結果表示）
+## 基本テスト
 
-## Creator Store素材の導入方法
+1. `git status --short` と差分を確認
+2. `rojo sourcemap default.project.json -o sourcemap.json`
+3. StudioでRojo接続を確認
+4. Script Analysisに新規エラーがないことを確認
+5. PlayでServer / Client Outputを確認
+6. Network関連はServer & Clientsでも確認
+7. 人間が操作感・見た目・コース接続を確認
 
-建物や街オブジェクトは、Roblox Studio の Toolbox から取得したモデルを
-`ServerStorage/CreatorStorePrefabs` に配置してください。
+## Git運用
 
-`MapBuilder.server.lua` はこのフォルダにあるモデルをコース左右へ配置します。
-フォルダが空の場合は、白ブロック/色付きPartの簡易ファサードで自動生成します。
+一工程ごとに、対象ファイルだけをステージします。Studio確認前の作業保存と、確認後の復元ポイントを区別してください。`reset`、`clean`、force pushは通常使用しません。競合時はpullやmergeを自動実行せず停止します。詳細は[Gitと復元ポイント運用](docs/08_Gitと復元ポイント運用.md)を参照してください。
+
+## Creator Store素材
+
+街や装飾のprefabを将来使用する場合は、Studio側の `ServerStorage/CreatorStorePrefabs` に安全確認済みmodelを配置します。`MapBuilder.server.lua` はこのfolderに内容があればcloneし、空または存在しない場合は簡易Partへfallbackします。Free ModelはScript、Remote、外部require、課金処理を確認してから導入し、Rojo管理外のStudio資産であることを記録してください。
+
+## マニュアル
+
+- [全体設計](docs/00_全体設計.md)
+- [StudioとRojo運用](docs/01_StudioとRojo運用.md)
+- [Luauコーディング標準](docs/02_Luauコーディング標準.md)
+- [クライアントサーバー設計](docs/03_クライアントサーバー設計.md)
+- [キャラクター物理と滑走](docs/04_キャラクター物理と滑走.md)
+- [入力とカメラ](docs/05_入力とカメラ.md)
+- [デバッグとテスト](docs/06_デバッグとテスト.md)
+- [パフォーマンス](docs/07_パフォーマンス.md)
+- [Gitと復元ポイント運用](docs/08_Gitと復元ポイント運用.md)
+- [AI実装ワークフロー](docs/09_AI実装ワークフロー.md)
+- [ぬるぬるRoll固有設計](docs/10_ぬるぬるRoll固有設計.md)
+- [不具合診断表](docs/11_不具合診断表.md)
+- [リリース前チェックリスト](docs/12_リリース前チェックリスト.md)
+
+## 保護対象と次工程
+
+コース座標、Road、`StartPad`、`CourseSpawn`、`GoalTrigger`、Baseplate退避処理は保護対象です。次工程はPhase 2の手順1「通常歩行と人工的な前進処理の停止」ですが、実装前に現在のProbe結果をStudioで確認し、物理制御方式を一つに決めます。
