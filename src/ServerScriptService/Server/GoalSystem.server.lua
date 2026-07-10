@@ -5,6 +5,13 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local Config = require(ReplicatedStorage.Shared.Config)
+
+local ENABLE_LEGACY_GOAL_SYSTEM = Config.Project and Config.Project.EnableLegacyGoalSystem == true
+if not ENABLE_LEGACY_GOAL_SYSTEM then
+    print("[GoalSystem] Legacy goal system disabled")
+    return
+end
+
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
 local remoteSet = Remotes.get()

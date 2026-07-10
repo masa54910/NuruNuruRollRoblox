@@ -5,7 +5,14 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
+local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+
+local ENABLE_LEGACY_SLIDE_HUD = Config.Project and Config.Project.EnableLegacySlideHud == true
+if not ENABLE_LEGACY_SLIDE_HUD then
+    print("[SlideClient] Legacy slide HUD disabled")
+    return
+end
 
 local player = Players.LocalPlayer
 local remoteSet = Remotes.get()

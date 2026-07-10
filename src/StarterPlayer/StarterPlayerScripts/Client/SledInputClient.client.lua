@@ -9,6 +9,12 @@ local RunService = game:GetService("RunService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
+local ENABLE_LEGACY_SLED_INPUT = Config.Project and Config.Project.EnableLegacySledInput == true
+if not ENABLE_LEGACY_SLED_INPUT then
+    print("[SledInput] Legacy sled input disabled")
+    return
+end
+
 local player = Players.LocalPlayer
 local remoteSet = Remotes.get()
 local sledSettings = Config.Sled or {}

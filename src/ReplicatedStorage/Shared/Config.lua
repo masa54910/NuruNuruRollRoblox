@@ -4,6 +4,11 @@ local Config = {
         Name = "NuruNuruRoll",
         SisterProject = "NuruNuruHill",
         EnableLegacySledSystem = false,
+        EnableLegacySledInput = false,
+        EnableLegacySlideHud = false,
+        EnableLegacyRoundSystem = false,
+        EnableLegacyResultUi = false,
+        EnableLegacyGoalSystem = false,
     },
 
     Round = {

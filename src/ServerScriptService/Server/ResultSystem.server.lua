@@ -7,6 +7,12 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
+local ENABLE_LEGACY_ROUND_SYSTEM = Config.Project and Config.Project.EnableLegacyRoundSystem == true
+if not ENABLE_LEGACY_ROUND_SYSTEM then
+    print("[ResultSystem] Legacy round system disabled")
+    return
+end
+
 local remoteSet = Remotes.get()
 
 local function getScore(player)

@@ -4,7 +4,14 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+
+local ENABLE_LEGACY_RESULT_UI = Config.Project and Config.Project.EnableLegacyResultUi == true
+if not ENABLE_LEGACY_RESULT_UI then
+    print("[ResultClient] Legacy result UI disabled")
+    return
+end
 
 local player = Players.LocalPlayer
 local remoteSet = Remotes.get()
