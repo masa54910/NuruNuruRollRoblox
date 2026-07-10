@@ -1,12 +1,12 @@
-# 10 ぬるぬるRoll固有設計
+# 10 ぬるぬるHill固有設計
 
 ## ゲームコンセプト
 
-巨大な下り坂を、乗り物ではなくRoblox Character自身で滑り続ける物理アクションです。長い下り、S字、ヘアピン、コブ、ジャンプ、左右のライン取り、将来のPOV cameraを中心にします。
+正式表示名は「ぬるぬるHill ～街中ダウンヒル～」、英語名は「NuruNuru Hill – Town Downhill」です。巨大な中世都市の下り坂を、乗り物ではなくRoblox Character自身で滑り続け、NPC巻き込み、jump、combo、港から海へのdiveを楽しむ物理アクションです。内部識別子は互換性のため現状維持します。
 
 ## 現在のPhase
 
-基準commitは `3c2521bf2dc77ad3357abfa4e9b6116d6f53f1bc` です。コースとBaseplate退避を保護し、Phase 2の重力滑走へ入る直前です。前進不能の原因を調べるClient/Server Probeがcodeにあり、完成版controllerではありません。
+基準commitは `920318463cc9863adaa7af543fff6afceabb6afd` です。コースとBaseplate退避を保護し、Gate 1のスタート待機と重力滑走を実装する段階です。前進不能の原因を調べるClient/Server Probeは保存されていますが、完成版controllerではありません。
 
 ## 確認済みのファイルと役割
 
@@ -18,6 +18,8 @@
 | `DownhillState.lua` | controllerとcamera間のlocal shared state、shake減衰 |
 | `DownhillController.client.lua` | 入力、Road開始方向、速度Probe、minimal controller候補 |
 | `DownhillPhysicsProbe.server.lua` | ServerでNetworkOwnerと速度保持を観測するProbe |
+| `DownhillStartSystem.server.lua` | 待機拘束、開始要求検証、Server timer属性、落下復帰 |
+| `GravitySlideController.client.lua` | 開始入力、mobile START、重力を残す横Forceと安全補助 |
 | `DownhillCamera.client.lua` | Scriptable camera候補。現在flag停止 |
 | `LotionSlideSystem.server.lua` | Humanoidを通常値へ戻すrestore-only処理 |
 | Legacy各Script | Config flagがfalseなら早期return |
@@ -27,14 +29,16 @@
 | フラグ | 値 | 意味 |
 | --- | --- | --- |
 | `EnableStartRedBall` | false | Startの巨大赤markerを生成しない |
-| `EnableDownhillController` | true | controller Script自体は起動対象 |
+| `EnableDownhillController` | false | 旧Probe controller停止 |
+| `EnableDownhillStartSystem` | true | Server start authority有効 |
+| `EnableGravitySlideController` | true | Gate 1 controller有効 |
 | `EnableDownhillCamera` | false | camera候補は停止 |
 | `EnableDownhillJumpPhysics` | false | jump physicsは停止 |
 | `EnableDownhillDebug` | true | debug出力有効 |
 | `EnableDownhillMinimalMode` | true | minimal調査方針 |
 | `EnableDownhillProbeLogs` | true | Probe log有効 |
-| `EnableDownhillClientImpulseProbe` | true | Client一度押しProbe。通常Heartbeat移動は停止 |
-| `EnableDownhillServerOwnershipProbe` | true | Server ownership観測有効 |
+| `EnableDownhillClientImpulseProbe` | false | Client一度押しProbe停止 |
+| `EnableDownhillServerOwnershipProbe` | false | Server ownership Probe停止 |
 | `EnableDownhillServerImpulseProbe` | false | Server一度押しは停止 |
 | Legacy Sled/Input/HUD/Round/Result/Goal | false | 旧機能停止 |
 
@@ -63,7 +67,7 @@ MapBuilderはStudio側の `ServerStorage.CreatorStorePrefabs` を任意入力と
 
 ## Downhill試作の現在状態
 
-`DownhillCourse` はRoad名の数値順を進行順としてcacheします。`DownhillController` はRoad_0001→Road_0002からstartForwardを作り、A/D・矢印・gamepad入力を持ちます。ただしClient impulse Probeがtrueのため、通常Heartbeat movementはcode上でpauseされます。Server Probeはownerを記録しますがServer impulseはfalseです。
+`DownhillCourse` はRoad名の数値順を進行順としてcacheします。旧 `DownhillController` とProbeはflag停止です。Gate 1では `DownhillStartSystem` が待機・開始・timer・復帰をServer管理し、`GravitySlideController` がW／↑／mobile STARTと左右入力を受け、単一VectorForceで横操作、転がり抵抗、非上り時の低速補助、速度超過制動を行います。重力と接触結果を残すため、滑走中にAssemblyLinearVelocity全体を毎frame固定しません。
 
 ## 確認済み事実と未確認事項
 

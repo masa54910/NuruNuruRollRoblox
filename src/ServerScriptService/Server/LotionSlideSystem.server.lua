@@ -2,6 +2,14 @@
 -- Slide physics is intentionally disabled. Keep humanoids in normal Roblox movement state.
 
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage.Shared.Config)
+
+if Config.Project and Config.Project.EnableDownhillStartSystem == true then
+    print("[LotionSlideSystem] disabled while DownhillStartSystem owns Humanoid setup")
+    return
+end
 
 local function restoreHumanoidDefaults(character)
     local humanoid = character:FindFirstChildOfClass("Humanoid") or character:WaitForChild("Humanoid", 5)

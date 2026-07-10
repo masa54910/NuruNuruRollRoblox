@@ -1,6 +1,8 @@
 local DownhillState = {}
 
 local state = {
+    phase = "Inactive",
+    startedAt = 0,
     active = false,
     grounded = false,
     roadName = "",
@@ -19,6 +21,8 @@ local state = {
 }
 
 function DownhillState.reset()
+    state.phase = "Inactive"
+    state.startedAt = 0
     state.active = false
     state.grounded = false
     state.roadName = ""

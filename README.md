@@ -1,6 +1,8 @@
-# ぬるぬるRoll（NuruNuruRoll）
+# ぬるぬるHill ～街中ダウンヒル～
 
-巨大な下り坂コースを、プレイヤー自身の物理挙動で高速滑走するRobloxゲームです。現在はコース生成を保護したまま、Phase 2の重力滑走を一工程ずつ検証する準備段階です。
+英語名: **NuruNuru Hill – Town Downhill**
+
+巨大な中世都市の下り坂を、プレイヤー自身の物理挙動で高速滑走するRobloxゲームです。NPC巻き込み、jump、combo、港から海へのdiveを含むgame loopを段階実装します。内部project名と既存識別子は互換性維持のため `NuruNuruRollRoblox` / `NuruNuruRollMap` のままです。
 
 ## 現在の状態
 
@@ -8,9 +10,11 @@
 - 既存コースは `StartPad` から `GoalTrigger` まで生成される構成
 - Baseplateは `CourseSpawn` より750 studs上へ退避し、衝突・接触・Queryを無効化
 - Legacy Sled / Input / HUD / Round / Result / GoalはConfigフラグで停止
-- Downhill Controllerは前進不能の原因調査用Probeモード
+- 旧Downhill Controllerと物理Probeはflag停止
+- Gate 1用のServer start authorityとGravity Slide Controllerを実装済み（Studio未確認）
 - Downhill CameraとJump Physicsは停止
-- Phase 2のゲームコードは未完成。Studioでの採用判断も未完了
+- 後続Phaseは未完成。Gate 1のStudio採用判断も未完了
+- 現在の実装工程とGateは [`STATUS.md`](STATUS.md) と [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) を参照
 
 「コードに存在する」と「Studioで動作確認済み」は別です。現在の確定事項は[ぬるぬるRoll固有設計](docs/10_ぬるぬるRoll固有設計.md)を参照してください。
 
@@ -27,9 +31,10 @@
 
 1. [`AGENTS.md`](AGENTS.md)
 2. このREADME
-3. [`docs/10_ぬるぬるRoll固有設計.md`](docs/10_ぬるぬるRoll固有設計.md)
-4. 作業内容に対応する章
-5. [`docs/09_AI実装ワークフロー.md`](docs/09_AI実装ワークフロー.md)
+3. [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) と [`STATUS.md`](STATUS.md)
+4. [`docs/10_ぬるぬるRoll固有設計.md`](docs/10_ぬるぬるRoll固有設計.md)
+5. 作業内容に対応する章
+6. [`docs/09_AI実装ワークフロー.md`](docs/09_AI実装ワークフロー.md)
 
 ## フォルダ構成
 

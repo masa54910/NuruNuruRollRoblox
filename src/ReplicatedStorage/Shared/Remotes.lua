@@ -51,6 +51,7 @@ function Remotes.get()
         RoundResult = ensureRemoteEvent(remotesFolder, "RoundResult"),
         GoalScored = ensureRemoteEvent(remotesFolder, "GoalScored"),
         SledInput = ensureRemoteEvent(remotesFolder, "SledInput"),
+        DownhillStartRequest = ensureRemoteEvent(remotesFolder, "DownhillStartRequest"),
         GoalReachedServer = ensureBindableEvent(remotesFolder, "GoalReachedServer"),
     }
 end
