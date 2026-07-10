@@ -159,6 +159,19 @@ local function prepareCharacter(player, character)
         end
 
         player.RespawnLocation = spawn
+
+        local distanceToSpawn = (root.Position - spawn.Position).Magnitude
+        if distanceToSpawn > MAXIMUM_START_DISTANCE then
+            setPhase(player, "Recovering")
+            warn(string.format(
+                "[DownhillStart] reloading off-spawn character player=%s distance=%.2f",
+                player.Name,
+                distanceToSpawn
+            ))
+            player:LoadCharacter()
+            return
+        end
+
         applySlidingPhysicalProperties(character)
 
         root.AssemblyLinearVelocity = Vector3.zero
@@ -178,7 +191,7 @@ local function prepareCharacter(player, character)
         print(string.format(
             "[DownhillStart] waiting player=%s distanceToSpawn=%.2f runId=%d",
             player.Name,
-            (root.Position - spawn.Position).Magnitude,
+            distanceToSpawn,
             state.runId
         ))
     end)
@@ -191,7 +204,7 @@ local function startRun(player)
     end
 
     local now = os.clock()
-    if now - state.lastRequestAt < REQUEST_COOLDOWN then
+    if state.lastRequestAt > 0 and now - state.lastRequestAt < REQUEST_COOLDOWN then
         return
     end
     state.lastRequestAt = now
