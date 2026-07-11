@@ -4,6 +4,8 @@ local RunService = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
 local Workspace = game:GetService("Workspace")
 
+local Config = require(ReplicatedStorage:WaitForChild("NuruNuruShared"):WaitForChild("Config"))
+
 local BUILD_VERSION = "RACING_GATE_R1"
 local MAP_READY_ATTRIBUTE = "NuruNuruRollMapReady"
 local SPAWN_LOCK_ATTRIBUTE = "NuruNuruRacingGateR1Spawned"
@@ -15,6 +17,24 @@ local CAR_GROUND_CLEARANCE = 0.75
 local PLAYER_OFFSET_RIGHT = -8
 local PLAYER_OFFSET_BACK = -7
 local PLAYER_OFFSET_UP = 3
+
+local wallConfig = Config.RacingWallBounce or {}
+local WALL_SPEED_RETENTION = tonumber(wallConfig.WallSpeedRetention) or 1.0
+local WALL_BOUNCE_COOLDOWN_SECONDS = tonumber(wallConfig.WallBounceCooldownSeconds) or 0.20
+local WALL_SAME_NORMAL_DOT_THRESHOLD = tonumber(wallConfig.WallSameNormalDotThreshold) or 0.94
+local WALL_SEPARATION_DISTANCE = tonumber(wallConfig.WallSeparationDistance) or 0.12
+local WALL_ROTATION_STABILIZE_SECONDS = tonumber(wallConfig.WallRotationStabilizeSeconds) or 0.18
+local WALL_STABILIZE_STEER_MULTIPLIER = tonumber(wallConfig.WallStabilizeSteerMultiplier) or 0.35
+local WALL_DIRECTION_ALIGN_RESPONSIVENESS = tonumber(wallConfig.WallDirectionAlignResponsiveness) or 35
+local WALL_DIRECTION_ALIGN_DURATION = tonumber(wallConfig.WallDirectionAlignDuration) or 0.16
+local WALL_DIRECTION_ALIGN_MAX_ANGULAR_VELOCITY = tonumber(wallConfig.WallDirectionAlignMaxAngularVelocity) or 8
+local WALL_ROAD_STICK_SPEED = tonumber(wallConfig.WallRoadStickSpeed) or 1.0
+
+local WALL_DETECT_MIN_SPEED = 4
+local WALL_DETECT_MIN_DISTANCE = 2.5
+local WALL_DETECT_FORWARD_MARGIN = 1.5
+local WALL_DETECT_VERTICAL_PROBE = 8
+local WALL_DETECT_VERTICAL_RANGE = 20
 
 local started = false
 
@@ -33,6 +53,13 @@ local function logInfo(message)
     if RunService:IsStudio() then
         print(message)
     end
+end
+
+local function formatVector3(v)
+    if not v then
+        return "(nil,nil,nil)"
+    end
+    return string.format("(%.3f,%.3f,%.3f)", v.X, v.Y, v.Z)
 end
 
 local function logFail(stage, reason)
@@ -138,6 +165,19 @@ local function getLegacySlideScriptsLoaded()
     return false
 end
 
+local function isRoadPart(part)
+    if not part or not part:IsA("BasePart") then
+        return false
+    end
+    if string.match(part.Name, "^Road_%d+$") then
+        return true
+    end
+    if part.Name == "CourseSpawn" or part.Name == "StartPad" or part.Name == "GoalTrigger" then
+        return true
+    end
+    return false
+end
+
 local function getCarTemplateInfo()
     local carTemplate = ReplicatedStorage:FindFirstChild("Car")
     if not carTemplate or not carTemplate:IsA("Model") then
@@ -201,6 +241,308 @@ local function getCarPivotPart(carModel)
     end
 
     return nil
+end
+
+local function getAssemblyRoot(part)
+    if not part then
+        return nil
+    end
+
+    local root = part.AssemblyRootPart
+    if root and root:IsA("BasePart") then
+        return root
+    end
+
+    return part
+end
+
+local function getSurfaceSample(mapRoot, assemblyRoot)
+    local origin = assemblyRoot.Position + Vector3.new(0, WALL_DETECT_VERTICAL_PROBE, 0)
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Include
+    params.FilterDescendantsInstances = { mapRoot }
+    params.IgnoreWater = true
+
+    local result = Workspace:Raycast(origin, Vector3.new(0, -WALL_DETECT_VERTICAL_RANGE, 0), params)
+    if not result or not result.Instance then
+        return nil
+    end
+
+    local normal = result.Normal.Magnitude > 0.001 and result.Normal.Unit or Vector3.yAxis
+    return {
+        part = result.Instance,
+        normal = normal,
+        position = result.Position,
+    }
+end
+
+local function ensureWallAligner(state, assemblyRoot)
+    if state.alignOrientation and state.alignOrientation.Parent == assemblyRoot then
+        return state.alignOrientation
+    end
+
+    if state.alignOrientation then
+        state.alignOrientation:Destroy()
+        state.alignOrientation = nil
+    end
+    if state.alignAttachment then
+        state.alignAttachment:Destroy()
+        state.alignAttachment = nil
+    end
+
+    local attachment = Instance.new("Attachment")
+    attachment.Name = "WallBounceAlignmentAttachment"
+    attachment.Parent = assemblyRoot
+
+    local align = Instance.new("AlignOrientation")
+    align.Name = "WallBounceAlignment"
+    align.Attachment0 = attachment
+    align.Mode = Enum.OrientationAlignmentMode.OneAttachment
+    align.ReactionTorqueEnabled = false
+    align.PrimaryAxisOnly = false
+    align.RigidityEnabled = false
+    align.Responsiveness = WALL_DIRECTION_ALIGN_RESPONSIVENESS
+    align.MaxAngularVelocity = WALL_DIRECTION_ALIGN_MAX_ANGULAR_VELOCITY
+    align.MaxTorque = math.huge
+    align.Enabled = false
+    align.Parent = assemblyRoot
+
+    state.alignAttachment = attachment
+    state.alignOrientation = align
+    return align
+end
+
+local function getWallHit(carModel, assemblyRoot, surfaceNormal, deltaTime)
+    local velocity = assemblyRoot.AssemblyLinearVelocity
+    local tangentVelocity = velocity - (surfaceNormal * velocity:Dot(surfaceNormal))
+    local speed = tangentVelocity.Magnitude
+    if speed < WALL_DETECT_MIN_SPEED then
+        return nil
+    end
+
+    local direction = tangentVelocity.Unit
+    local castDistance = math.max(WALL_DETECT_MIN_DISTANCE, (speed * deltaTime) + WALL_DETECT_FORWARD_MARGIN)
+    local castSize = assemblyRoot.Size + Vector3.new(0.4, 0.2, 0.4)
+
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    params.FilterDescendantsInstances = { carModel }
+    params.IgnoreWater = true
+
+    local result = Workspace:Blockcast(assemblyRoot.CFrame, castSize, direction * castDistance, params)
+    if not result or not result.Instance then
+        return nil
+    end
+
+    if not result.Instance:IsA("BasePart") then
+        return nil
+    end
+    if not result.Instance.CanCollide then
+        return nil
+    end
+    if isRoadPart(result.Instance) then
+        return nil
+    end
+
+    return {
+        part = result.Instance,
+        normal = result.Normal,
+        position = result.Position,
+        velocity = velocity,
+        tangentVelocity = tangentVelocity,
+    }
+end
+
+local function applyWallBounce(state, carModel, assemblyRoot, surfaceNormal, wallHit)
+    local now = os.clock()
+    local wallNormal = wallHit.normal.Magnitude > 0.001 and wallHit.normal.Unit or nil
+    if not wallNormal then
+        logFail("wall_bounce", "invalid_wall_normal")
+        return
+    end
+
+    local velocityBefore = wallHit.velocity
+    local angularBefore = assemblyRoot.AssemblyAngularVelocity
+    local movingIntoWall = velocityBefore:Dot(wallNormal) < 0
+    if not movingIntoWall then
+        logInfo("[WallBounceIgnored] reason=moving_away")
+        return
+    end
+
+    if state.lastWallPart == wallHit.part then
+        local elapsed = now - (state.lastWallBounceAt or 0)
+        if elapsed <= WALL_BOUNCE_COOLDOWN_SECONDS and state.lastWallNormal then
+            local dotValue = wallNormal:Dot(state.lastWallNormal)
+            if dotValue >= WALL_SAME_NORMAL_DOT_THRESHOLD then
+                logInfo("[WallBounceIgnored] reason=cooldown")
+                return
+            end
+        end
+    end
+
+    local wallNormalOnSurface = wallNormal - (surfaceNormal * wallNormal:Dot(surfaceNormal))
+    if wallNormalOnSurface.Magnitude <= 0.001 then
+        logFail("wall_bounce", "wall_normal_on_surface_too_small")
+        return
+    end
+    wallNormalOnSurface = wallNormalOnSurface.Unit
+
+    local normalVelocity = surfaceNormal * velocityBefore:Dot(surfaceNormal)
+    local tangentVelocity = velocityBefore - normalVelocity
+    local speedBefore = tangentVelocity.Magnitude
+    if speedBefore <= 0.001 then
+        logInfo("[WallBounceIgnored] reason=low_speed")
+        return
+    end
+
+    local reflectedVelocity = tangentVelocity
+        - (2 * tangentVelocity:Dot(wallNormalOnSurface) * wallNormalOnSurface)
+    if reflectedVelocity.Magnitude <= 0.001 then
+        logInfo("[WallBounceIgnored] reason=degenerate_reflection")
+        return
+    end
+
+    local reflectedDirection = reflectedVelocity.Unit
+    local finalTangentVelocity = reflectedDirection * (speedBefore * WALL_SPEED_RETENTION)
+    local finalVelocity = finalTangentVelocity - (surfaceNormal * WALL_ROAD_STICK_SPEED)
+
+    local upwardSpeed = finalVelocity:Dot(surfaceNormal)
+    if upwardSpeed > 0 then
+        finalVelocity -= surfaceNormal * upwardSpeed
+    end
+
+    local speedAfter = finalVelocity.Magnitude
+
+    logInfo(string.format(
+        "[WallBounceDetect] part=%s normal=%s speed=%.3f angularSpeed=%.3f",
+        wallHit.part:GetFullName(),
+        formatVector3(wallNormal),
+        speedBefore,
+        angularBefore.Magnitude
+    ))
+
+    logInfo(string.format(
+        "[WallBounceDirection] before=%s after=%s speedBefore=%.3f speedAfter=%.3f",
+        formatVector3(tangentVelocity.Unit),
+        formatVector3(reflectedDirection),
+        speedBefore,
+        speedAfter
+    ))
+
+    local currentPivot = carModel:GetPivot()
+    local separatedPivot = currentPivot + (wallNormalOnSurface * WALL_SEPARATION_DISTANCE)
+    carModel:PivotTo(separatedPivot)
+
+    assemblyRoot.AssemblyLinearVelocity = finalVelocity
+    assemblyRoot.AssemblyAngularVelocity = Vector3.zero
+
+    state.lastWallPart = wallHit.part
+    state.lastWallNormal = wallNormal
+    state.lastWallBounceAt = now
+
+    state.stabilizing = true
+    state.stabilizeUntil = now + WALL_ROTATION_STABILIZE_SECONDS
+    state.alignUntil = now + WALL_DIRECTION_ALIGN_DURATION
+
+    carModel:SetAttribute("WallBounceStabilizing", true)
+
+    local align = ensureWallAligner(state, assemblyRoot)
+    local alignMethod = "alignOrientation"
+    if align then
+        align.Responsiveness = WALL_DIRECTION_ALIGN_RESPONSIVENESS
+        align.MaxAngularVelocity = WALL_DIRECTION_ALIGN_MAX_ANGULAR_VELOCITY
+        align.CFrame = CFrame.lookAt(Vector3.zero, reflectedDirection, surfaceNormal)
+        align.Enabled = true
+    else
+        alignMethod = "pivot"
+        local pos = assemblyRoot.Position
+        carModel:PivotTo(CFrame.lookAt(pos, pos + reflectedDirection, surfaceNormal))
+    end
+
+    local headingDot = assemblyRoot.CFrame.LookVector:Dot(reflectedDirection)
+    logInfo(string.format("[WallDirectionAligned] method=%s headingDot=%.3f", alignMethod, headingDot))
+
+    logInfo(string.format(
+        "[WallRotationSuppressed] angularBefore=%s angularAfter=(0,0,0) duration=%.2f root=%s",
+        formatVector3(angularBefore),
+        WALL_ROTATION_STABILIZE_SECONDS,
+        assemblyRoot.Name
+    ))
+end
+
+local function startWallBounceMonitor(carModel, mapRoot)
+    local chassis = getCarPivotPart(carModel)
+    if not chassis then
+        logFail("wall_monitor", "chassis_not_found")
+        return
+    end
+
+    local inputs = carModel:FindFirstChild("Inputs")
+    local state = {
+        lastWallPart = nil,
+        lastWallNormal = nil,
+        lastWallBounceAt = 0,
+        stabilizing = false,
+        stabilizeUntil = 0,
+        alignUntil = 0,
+        alignAttachment = nil,
+        alignOrientation = nil,
+    }
+
+    local heartbeatConnection
+    heartbeatConnection = RunService.Heartbeat:Connect(function(deltaTime)
+        if not carModel:IsDescendantOf(Workspace) then
+            if heartbeatConnection then
+                heartbeatConnection:Disconnect()
+            end
+            if state.alignOrientation then
+                state.alignOrientation:Destroy()
+            end
+            if state.alignAttachment then
+                state.alignAttachment:Destroy()
+            end
+            return
+        end
+
+        local assemblyRoot = getAssemblyRoot(chassis)
+        if not assemblyRoot then
+            return
+        end
+
+        local surfaceSample = getSurfaceSample(mapRoot, assemblyRoot)
+        local surfaceNormal = surfaceSample and surfaceSample.normal or Vector3.yAxis
+
+        if state.stabilizing then
+            if os.clock() < state.stabilizeUntil then
+                assemblyRoot.AssemblyAngularVelocity = Vector3.zero
+
+                if inputs and inputs:IsA("Configuration") then
+                    local rawSteer = inputs:GetAttribute("steeringInput")
+                    if typeof(rawSteer) == "number" then
+                        inputs:SetAttribute("steeringInput", math.clamp(rawSteer * WALL_STABILIZE_STEER_MULTIPLIER, -1, 1))
+                    end
+                end
+            else
+                state.stabilizing = false
+                carModel:SetAttribute("WallBounceStabilizing", false)
+                logInfo(string.format(
+                    "[WallStabilizationComplete] angularSpeed=%.3f steeringRestored=true",
+                    assemblyRoot.AssemblyAngularVelocity.Magnitude
+                ))
+            end
+        end
+
+        if state.alignOrientation and state.alignOrientation.Enabled and os.clock() >= state.alignUntil then
+            state.alignOrientation.Enabled = false
+        end
+
+        local wallHit = getWallHit(carModel, assemblyRoot, surfaceNormal, deltaTime)
+        if not wallHit then
+            return
+        end
+
+        applyWallBounce(state, carModel, assemblyRoot, surfaceNormal, wallHit)
+    end)
 end
 
 local function placePlayersNearCar(carModel)
@@ -336,6 +678,7 @@ local function run()
     ))
 
     placePlayersNearCar(carModel)
+    startWallBounceMonitor(carModel, mapRoot)
 
     local legacyLoaded = getLegacySlideScriptsLoaded()
     logInfo(string.format("[RacingIntegration] legacySlideScriptsLoaded=%s", tostring(legacyLoaded)))

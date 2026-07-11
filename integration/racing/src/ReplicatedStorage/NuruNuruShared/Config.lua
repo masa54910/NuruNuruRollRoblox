@@ -199,6 +199,19 @@ local Config = {
         DebugIntervalSeconds = 1,
     },
 
+    RacingWallBounce = {
+        WallSpeedRetention = 1.0,
+        WallBounceCooldownSeconds = 0.20,
+        WallSameNormalDotThreshold = 0.94,
+        WallSeparationDistance = 0.12,
+        WallRotationStabilizeSeconds = 0.18,
+        WallStabilizeSteerMultiplier = 0.35,
+        WallDirectionAlignResponsiveness = 35,
+        WallDirectionAlignDuration = 0.16,
+        WallDirectionAlignMaxAngularVelocity = 8,
+        WallRoadStickSpeed = 1.0,
+    },
+
     Course = {
         ModelName = "NuruNuruCourse",
         StartHeight = 420,
