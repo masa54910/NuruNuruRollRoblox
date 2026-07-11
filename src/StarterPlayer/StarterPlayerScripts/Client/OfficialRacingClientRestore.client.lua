@@ -102,15 +102,19 @@ local function cameraBoundToVehicle(seat, vehicleModel)
 end
 
 local function resetCharacterVisualAndHumanoid(character)
+    local hideOriginalCharacter = (Config.Project and Config.Project.HideOriginalCharacter == true)
+
     local humanoid = character:FindFirstChildOfClass("Humanoid")
     if humanoid then
         humanoid.AutoRotate = true
         humanoid.PlatformStand = false
     end
 
-    for _, desc in ipairs(character:GetDescendants()) do
-        if desc:IsA("BasePart") then
-            desc.LocalTransparencyModifier = 0
+    if not hideOriginalCharacter then
+        for _, desc in ipairs(character:GetDescendants()) do
+            if desc:IsA("BasePart") then
+                desc.LocalTransparencyModifier = 0
+            end
         end
     end
 

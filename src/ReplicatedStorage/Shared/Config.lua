@@ -26,6 +26,16 @@ local Config = {
         EnableOfficialRacingRestore = true,
         EnableOfficialRacingClientProbe = true,
 
+        BathVisualEnabled = true,
+        BathDummyEnabled = true,
+        HideOriginalCharacter = true,
+        BathVisualUseRenderTracking = true,
+        BathVisualDebugEnabled = true,
+
+        OverviewCameraEnabled = true,
+        OverviewCameraHoldKey = "Shift",
+        OverviewCameraUseCourseBounds = true,
+
         EnableFixedR15RuntimeProbe = false,
         EnableLegacyCharacterPose = false,
         EnableLegacyCharacterSpin = false,
@@ -47,6 +57,38 @@ local Config = {
         VisualForwardOffset = 0,
         VisualSideOffset = 0,
         VisualHeadingResponse = 12,
+    },
+
+    BathVisual = {
+        BathHeightOffset = -1.4,
+        BathForwardOffset = 0,
+        BathSideOffset = 0,
+
+        BathYawOffsetDegrees = 0,
+        BathPitchOffsetDegrees = 0,
+        BathRollOffsetDegrees = 0,
+
+        OldManHeadHeightOffset = 1.8,
+        OldManTorsoHeightOffset = 0.4,
+        OldManForwardOffset = 0.3,
+        OldManSideOffset = 0,
+        OldManArmHeightOffset = 1.0,
+        OldManArmForwardOffset = 0.15,
+    },
+
+    OverviewCamera = {
+        OverviewCameraFieldOfView = 60,
+        OverviewCameraUseCourseBounds = true,
+        OverviewCameraPadding = 1.35,
+
+        OverviewCameraPitchDegrees = -55,
+        OverviewCameraInitialYawDegrees = 0,
+        OverviewRotationSpeedDegreesPerSecond = 55,
+
+        OverviewCameraMinimumDistance = 700,
+        OverviewCameraMaximumDistance = 5000,
+
+        OverviewCameraTransitionSeconds = 0,
     },
 
     Round = {
