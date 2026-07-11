@@ -9,6 +9,12 @@ local DownhillCourse = require(ReplicatedStorage.Shared.DownhillCourse)
 local DownhillState = require(ReplicatedStorage.Shared.DownhillState)
 
 local projectConfig = Config.Project or {}
+if projectConfig.EnableLegacyCharacterPose == false then
+    print("[LegacyCharacterPose] disabled")
+end
+if projectConfig.EnableLegacyCharacterSpin == false then
+    print("[LegacyCharacterSpin] disabled")
+end
 if projectConfig.EnableDownhillController ~= true then
     return
 end

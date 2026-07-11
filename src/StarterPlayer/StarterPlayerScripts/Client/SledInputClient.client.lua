@@ -36,7 +36,33 @@ local state = {
     lastSend = 0,
     wasActive = false,
     bound = false,
+    forwardBoundLogged = false,
+    steeringBoundLogged = false,
+    movementStarted = false,
+    lastCarrierRoot = nil,
 }
+
+local function getCarrierRootFromSeat(seatPart)
+    if not seatPart or not seatPart:IsA("Seat") then
+        return nil
+    end
+
+    local model = seatPart:FindFirstAncestorOfClass("Model")
+    if not model then
+        return seatPart.AssemblyRootPart
+    end
+
+    local base = model:FindFirstChild("Base", true)
+    if base and base:IsA("BasePart") then
+        return base
+    end
+
+    if model.PrimaryPart and model.PrimaryPart:IsA("BasePart") then
+        return model.PrimaryPart
+    end
+
+    return seatPart.AssemblyRootPart
+end
 
 local function getCurrentSeat()
     local character = player.Character
@@ -113,6 +139,12 @@ local function bindSledInput()
         Enum.KeyCode.S,
         Enum.KeyCode.Down
     )
+
+    if not state.forwardBoundLogged or not state.steeringBoundLogged then
+        state.forwardBoundLogged = true
+        state.steeringBoundLogged = true
+        print("[POVInput] forwardBound=true steeringBound=true")
+    end
 end
 
 local function unbindSledInput()
@@ -130,6 +162,8 @@ local function unbindSledInput()
     state.right = false
     state.up = false
     state.down = false
+    state.movementStarted = false
+    state.lastCarrierRoot = nil
 end
 
 RunService.RenderStepped:Connect(function()
@@ -159,12 +193,23 @@ RunService.RenderStepped:Connect(function()
 
     bindSledInput()
 
+    local carrierRoot = getCarrierRootFromSeat(seat)
+    if carrierRoot and carrierRoot ~= state.lastCarrierRoot then
+        state.lastCarrierRoot = carrierRoot
+        local model = carrierRoot:FindFirstAncestorOfClass("Model")
+        print(string.format(
+            "[POVCarrier] model=%s rootPart=%s",
+            model and model:GetFullName() or "(none)",
+            carrierRoot:GetFullName()
+        ))
+    end
+
     if humanoid then
         humanoid.AutoRotate = false
     end
-    if camera and humanoid then
+    if camera and carrierRoot then
         camera.CameraType = Enum.CameraType.Custom
-        camera.CameraSubject = humanoid
+        camera.CameraSubject = carrierRoot
     end
 
     local steering = 0
@@ -200,6 +245,11 @@ RunService.RenderStepped:Connect(function()
 
         if DEBUG_INPUT then
             print(string.format("[SledInput] steering=%.1f throttle=%.1f", steering, throttle))
+        end
+
+        if throttle > 0 and not state.movementStarted then
+            state.movementStarted = true
+            print("[POVMovement] started=true input=W/Up")
         end
 
         remoteSet.SledInput:FireServer(steering, throttle)

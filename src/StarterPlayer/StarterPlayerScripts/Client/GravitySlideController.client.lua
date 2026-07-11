@@ -9,7 +9,13 @@ local DownhillCourse = require(ReplicatedStorage.Shared.DownhillCourse)
 local DownhillState = require(ReplicatedStorage.Shared.DownhillState)
 
 local projectConfig = Config.Project or {}
+if projectConfig.EnableLegacySlideCharacterController == false or projectConfig.EnableLegacySlideVisual == false then
+    print("[LegacySlideVisual] disabled")
+    return
+end
+
 if projectConfig.EnableGravitySlideController ~= true then
+    print("[LegacySlideCharacterController] disabled")
     return
 end
 
