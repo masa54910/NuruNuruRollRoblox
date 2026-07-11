@@ -1,0 +1,29 @@
+{
+  "$schema": "https://raw.githubusercontent.com/rojo-rbx/rojo/master/schemas/project.schema.json",
+  "name": "NuruNuruRacingIntegration",
+  "emitLegacyScripts": false,
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "NuruNuruShared": {
+        "$path": "integration/racing/src/ReplicatedStorage/NuruNuruShared"
+      }
+    },
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "NuruNuruServer": {
+        "$path": "integration/racing/src/ServerScriptService/NuruNuruServer"
+      }
+    },
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "NuruNuruClient": {
+          "$path": "integration/racing/src/StarterPlayer/StarterPlayerScripts/NuruNuruClient"
+        }
+      }
+    }
+  }
+}
